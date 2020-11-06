@@ -2,7 +2,7 @@ from datetime import datetime as dt
 from multiprocessing.dummy import Pool
 from unittest.mock import call, patch
 
-import pytest
+import pytest  # type: ignore
 
 from subwinder._request import Endpoints, _client, request
 from subwinder.exceptions import SubServerError

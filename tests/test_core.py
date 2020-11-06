@@ -5,7 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import call, patch
 
-import pytest
+import pytest  # type: ignore
 
 from subwinder import AuthSubwinder, Subwinder
 from subwinder._constants import Env

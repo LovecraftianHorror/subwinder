@@ -6,7 +6,7 @@ documented for it, so enjoy this pytest black magic.
 import logging
 from datetime import datetime as dt
 
-import pytest
+import pytest  # type: ignore
 
 from subwinder.lang import _converter
 

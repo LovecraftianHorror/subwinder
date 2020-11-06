@@ -6,10 +6,9 @@ from pathlib import Path
 from typing import List, Optional, Union, cast
 
 from subwinder._constants import REPO_URL, TIME_FORMAT
+from subwinder._internal_utils import CompatPath
 from subwinder.exceptions import SubLibError
 from subwinder.lang import LangFormat, lang_3s
-
-CompatPath = Union[Path, str]
 
 
 @dataclass

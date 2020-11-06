@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from unittest.mock import patch
 
-import pytest
+import pytest  # type: ignore
 
 from subwinder.info import (
     Comment,

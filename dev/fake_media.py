@@ -2,14 +2,15 @@
 import argparse
 import json
 from pathlib import Path
+from typing import List
 
 
-def _main():
+def _main() -> None:
     args = _parse_args()
     fake_media(args.entry_file, args.output_dir, args.entry)
 
 
-def _parse_args():
+def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-e",
@@ -40,8 +41,9 @@ def _parse_args():
     return args
 
 
+# TODO: take Path or str?
 # TODO: test that the hashes are right in unit testing
-def fake_media(entry_file, output_dir, entry_indicies=[]):
+def fake_media(entry_file: Path, output_dir: Path, entry_indicies: List[int] = []):
     HASH_SIZE = 8
     MAX_HASH = 2 ** (HASH_SIZE * 8) - 1
     MIN_FILE_SIZE = 128 * 1024
@@ -52,7 +54,7 @@ def fake_media(entry_file, output_dir, entry_indicies=[]):
 
     # Empty `entry_indicies` means all entries
     if len(entry_indicies) == 0:
-        entry_indicies = range(len(entries))
+        entry_indicies = list(range(len(entries)))
 
     for index in entry_indicies:
         # Make sure all entries are within bounds

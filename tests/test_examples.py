@@ -4,7 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import call, patch
 
-import pytest
+import pytest  # type: ignore
 
 from dev.fake_media import fake_media
 from examples.interactive import interative

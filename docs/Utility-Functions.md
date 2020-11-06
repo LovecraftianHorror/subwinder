@@ -10,12 +10,14 @@ from subwinder.utils import extract, special_hash
 
 ### Table of Contents
 
-* [`extract()`](#extractbytes-encoding)
+* [`extract()`](#extractcontents-encoding)
 * [`special_hash()`](#special_hashfilepath)
 
-### `extract(bytes)`
+### `extract(contents)`
 
-Small helper function that base64 decodes and gzip decompresses `bytes`. This likely won't be useful to many people, but this is the format used to transfer subtitles and previews from the opensubtitles API.
+Small helper function that base64 decodes and gzip decompresses `contents`. This likely won't be useful to many people, but this is the format used to transfer subtitles and previews from the opensubtitles API.
+
+<!-- TODO: this code example is out of date. `extract` takes `str` not `bytes` -->
 
 ```python
 assert b"Hi!" == extract(b"H4sIAIjurl4C//PIVAQA2sWeeQMAAAA=")
