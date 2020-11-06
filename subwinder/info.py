@@ -1,15 +1,158 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union, cast
 
 from subwinder._constants import REPO_URL, TIME_FORMAT
 from subwinder.exceptions import SubLibError
 from subwinder.lang import LangFormat, lang_3s
 
+CompatPath = Union[Path, str]
+
+
+@dataclass
+class MediaInfo:
+    """
+    Data container for a generic Media.
+    """
+
+    name: str
+    year: int
+    imdbid: str
+    _dirname: Optional[Path]
+    _filename: Optional[Path]
+
+    def __init__(
+        self,
+        name: str,
+        year: int,
+        imdbid: str,
+        dirname: Optional[CompatPath],
+        filename: Optional[CompatPath],
+    ) -> None:
+        self.name = name
+        self.year = year
+        self.imdbid = imdbid
+        self.set_dirname(dirname)
+        self.set_filename(filename)
+
+    @classmethod
+    def from_data(cls, data: dict) -> MediaInfo:
+        name = data["MovieName"]
+        # Sometimes this is returned as an `int`, sometimes it's a `str` ¯\_(ツ)_/¯
+        year = int(data["MovieYear"])
+        # For some reason opensubtitles sometimes returns this as an integer
+        # Example: best guess when using `guess_media` for "the expanse" has
+        #          `type(data["IDMovieIMDB"]) == int`
+        imdbid = str(data.get("IDMovieImdb") or data["IDMovieIMDB"])
+
+        return cls(name, year, imdbid, dirname=None, filename=None)
+
+    def set_filepath(self, filepath: Optional[CompatPath]) -> None:
+        if filepath is None:
+            self.set_dirname(None)
+            self.set_filename(None)
+        else:
+            filepath = Path(filepath)
+
+            self.set_dirname(filepath.parent)
+            self.set_filename(filepath.name)
+
+    def set_filename(self, filename: Optional[CompatPath]) -> None:
+        self._filename: Optional[Path] = None if filename is None else Path(filename)
+
+    def set_dirname(self, dirname: Optional[CompatPath]) -> None:
+        self._dirname = None if dirname is None else Path(dirname)
+
+    def get_filepath(self) -> Optional[Path]:
+        if self.get_filename() is None or self.get_dirname() is None:
+            return None
+
+        return cast(Path, self.get_dirname()) / cast(Path, self.get_filename())
+
+    def get_filename(self) -> Optional[Path]:
+        return self._filename
+
+    def get_dirname(self) -> Optional[Path]:
+        return self._dirname
+
+
+class MovieInfo(MediaInfo):
+    """
+    Data container for a Movie.
+    """
+
+    # TODO: figure out if there is a way to do this without redefining
+    @classmethod
+    def from_data(cls, data: dict) -> MovieInfo:
+        return cast(MovieInfo, super().from_data(data))
+
+
+class TvSeriesInfo(MediaInfo):
+    """
+    Data container for a TV Series.
+    """
+
+    # TODO: figure out if there is a way to do this without redefining
+    @classmethod
+    def from_data(cls, data: dict) -> TvSeriesInfo:
+        return cast(TvSeriesInfo, super().from_data(data))
+
+
+@dataclass
+class EpisodeInfo(TvSeriesInfo):
+    """
+    Data contianer for a single TV Series Episode.
+    """
+
+    season: int
+    episode: int
+
+    def __init__(
+        self,
+        name: str,
+        year: int,
+        imdbid: str,
+        dirname: Optional[CompatPath],
+        filename: Optional[CompatPath],
+        season: int,
+        episode: int,
+    ) -> None:
+        super().__init__(name, year, imdbid, dirname, filename)
+        self.season = season
+        self.episode = episode
+
+    @classmethod
+    def from_data(cls, data: dict) -> EpisodeInfo:
+        tv_series = TvSeriesInfo.from_data(data)
+        # Yay different keys for the same data!
+        season = int(data.get("SeriesSeason") or data["Season"])
+        episode = int(data.get("SeriesEpisode") or data["Episode"])
+
+        return cls.from_tv_series(tv_series, season, episode)
+
+    @classmethod
+    def from_tv_series(
+        cls, tv_series: TvSeriesInfo, season: int, episode: int
+    ) -> EpisodeInfo:
+        return cls(
+            name=tv_series.name,
+            year=tv_series.year,
+            imdbid=tv_series.imdbid,
+            dirname=tv_series.get_dirname(),
+            filename=tv_series.get_filename(),
+            season=season,
+            episode=episode,
+        )
+
+
+BuiltMedia = Union[MovieInfo, EpisodeInfo, TvSeriesInfo]
+
 
 # Build the right info object from the "MovieKind"
-def build_media_info(data):
+def build_media_info(data: dict) -> BuiltMedia:
     """
     Automatically builds `data` into the correct `MediaInfo` class. `dirname` and
     `filename` can be set to tie the resulting object to some local file.
@@ -22,7 +165,8 @@ def build_media_info(data):
 
     kind = data["MovieKind"]
     if kind in MEDIA_MAP:
-        return MEDIA_MAP[kind].from_data(data)
+        media_kind = cast(BuiltMedia, MEDIA_MAP[kind])
+        return media_kind.from_data(data)
 
     raise SubLibError(
         f'The library encounterd an undefined MovieKind: "{kind}". You can raise an'
@@ -40,7 +184,7 @@ class UserInfo:
     name: str
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data: dict) -> Optional[UserInfo]:
         # Different keys for the same data again :/
         id = data.get("UserID") or data["IDUser"]
 
@@ -48,7 +192,7 @@ class UserInfo:
         if id == "0":
             return None
 
-        return cls(id=id, name=data["UserNickName"],)
+        return cls(id=id, name=data["UserNickName"])
 
 
 @dataclass
@@ -60,11 +204,12 @@ class FullUserInfo(UserInfo):
     rank: str
     num_uploads: int
     num_downloads: int
-    preferred_languages: list
+    preferred_languages: List[str]
     web_language: str
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data: dict) -> FullUserInfo:
+        user = cast(UserInfo, UserInfo.from_data(data))
         preferred = []
         for lang in data["UserPreferedLanguages"].split(","):
             # Ignore empty string in case of no preferred languages
@@ -72,7 +217,8 @@ class FullUserInfo(UserInfo):
                 preferred.append(lang_3s.convert(lang, LangFormat.LANG_2))
 
         return cls(
-            **UserInfo.from_data(data).__dict__,
+            id=user.id,
+            name=user.name,
             rank=data["UserRank"],
             num_uploads=int(data["UploadCnt"]),
             num_downloads=int(data["DownloadCnt"]),
@@ -92,120 +238,12 @@ class Comment:
     text: str
 
     @classmethod
-    def from_data(cls, data):
-        author = UserInfo.from_data(data)
+    def from_data(cls, data: dict) -> Comment:
+        author = cast(UserInfo, UserInfo.from_data(data))
         date = datetime.strptime(data["Created"], TIME_FORMAT)
         text = data["Comment"]
 
         return cls(author, date, text)
-
-
-@dataclass
-class MediaInfo:
-    """
-    Data container for a generic Media.
-    """
-
-    name: str
-    year: int
-    imdbid: str
-    _dirname: Path
-    _filename: Path
-
-    def __init__(self, name, year, imdbid, dirname, filename):
-        self.name = name
-        self.year = year
-        self.imdbid = imdbid
-        self.set_dirname(dirname)
-        self.set_filename(filename)
-
-    @classmethod
-    def from_data(cls, data):
-        name = data["MovieName"]
-        # Sometimes this is returned as an `int`, sometimes it's a `str` ¯\_(ツ)_/¯
-        year = int(data["MovieYear"])
-        # For some reason opensubtitles sometimes returns this as an integer
-        # Example: best guess when using `guess_media` for "the expanse" has
-        #          `type(data["IDMovieIMDB"]) == int`
-        imdbid = str(data.get("IDMovieImdb") or data["IDMovieIMDB"])
-
-        return cls(name, year, imdbid, dirname=None, filename=None)
-
-    def set_filepath(self, filepath):
-        if filepath is None:
-            self.set_dirname(None)
-            self.set_filename(None)
-        else:
-            filepath = Path(filepath)
-
-            self.set_dirname(filepath.parent)
-            self.set_filename(filepath.name)
-
-    def set_filename(self, filename):
-        self._filename = None if filename is None else Path(filename)
-
-    def set_dirname(self, dirname):
-        self._dirname = None if dirname is None else Path(dirname)
-
-    def get_filepath(self):
-        if self.get_filename() is None or self.get_dirname() is None:
-            return None
-
-        return self.get_dirname() / self.get_filename()
-
-    def get_filename(self):
-        return self._filename
-
-    def get_dirname(self):
-        return self._dirname
-
-
-class MovieInfo(MediaInfo):
-    """
-    Data container for a Movie.
-    """
-
-
-class TvSeriesInfo(MediaInfo):
-    """
-    Data container for a TV Series.
-    """
-
-
-@dataclass
-class EpisodeInfo(TvSeriesInfo):
-    """
-    Data contianer for a single TV Series Episode.
-    """
-
-    season: int
-    episode: int
-
-    def __init__(self, name, year, imdbid, dirname, filename, season, episode):
-        super().__init__(name, year, imdbid, dirname, filename)
-        self.season = season
-        self.episode = episode
-
-    @classmethod
-    def from_data(cls, data):
-        tv_series = TvSeriesInfo.from_data(data)
-        # Yay different keys for the same data!
-        season = int(data.get("SeriesSeason") or data.get("Season"))
-        episode = int(data.get("SeriesEpisode") or data.get("Episode"))
-
-        return cls.from_tv_series(tv_series, season, episode)
-
-    @classmethod
-    def from_tv_series(cls, tv_series, season, episode):
-        return cls(
-            name=tv_series.name,
-            year=tv_series.year,
-            imdbid=tv_series.imdbid,
-            dirname=tv_series.get_dirname(),
-            filename=tv_series.get_filename(),
-            season=season,
-            episode=episode,
-        )
 
 
 # TODO: are "global_24h_download_limit" and "client_24h_download_limit" ever different?
@@ -222,7 +260,7 @@ class DownloadInfo:
     limit_checked_by: str
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data: dict) -> DownloadInfo:
         limits = data["download_limits"]
         return cls(
             ip=limits["client_ip"],
@@ -251,7 +289,7 @@ class ServerInfo:
     daily_download_info: DownloadInfo
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data: dict) -> ServerInfo:
         return cls(
             application=data["application"],
             users_online=int(data["users_online_total"]),
@@ -275,7 +313,7 @@ class SubtitlesInfo:
     size: int
     id: str
     file_id: str
-    sub_to_movie_id: Union[str, None]
+    sub_to_movie_id: Optional[str]
     filename: Path
     lang_2: str
     lang_3: str
@@ -283,7 +321,7 @@ class SubtitlesInfo:
     encoding: str
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data: dict) -> SubtitlesInfo:
         # If the search was done with anything other than movie hash and size then
         # there isn't a "IDSubMovieFile"
         if data["IDSubMovieFile"] == "0":
@@ -310,18 +348,18 @@ class SearchResult:
     Data container for a search result from searching for subtitles.
     """
 
-    author: Union[UserInfo, None]
+    author: Optional[UserInfo]
     media: MediaInfo
     subtitles: SubtitlesInfo
     upload_date: datetime
     num_bad_reports: int
     num_downloads: int
     num_comments: int
-    rating: Union[float, None]
+    rating: Optional[float]
     score: float
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data: dict) -> SearchResult:
         return cls(
             author=UserInfo.from_data(data),
             media=build_media_info(data),
@@ -343,12 +381,12 @@ class GuessMediaResult:
     Data container for a result from `AuthSubwinder`'s `guess_media` method
     """
 
-    best_guess: MediaInfo
-    from_string: MediaInfo
+    best_guess: Optional[BuiltMedia]
+    from_string: Optional[BuiltMedia]
     from_imdb: List[MediaInfo]
 
     @classmethod
-    def from_data(cls, data):
+    def from_data(cls, data: dict) -> GuessMediaResult:
         BEST_GUESS_KEY = "BestGuess"
         FROM_STRING_KEY = "GuessMovieFromString"
         IMDB_KEY = "GetIMDBSuggest"
