@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 from subwinder._constants import REPO_URL, TIME_FORMAT
 from subwinder.exceptions import SubLibError
@@ -275,7 +275,7 @@ class SubtitlesInfo:
     size: int
     id: str
     file_id: str
-    sub_to_movie_id: str
+    sub_to_movie_id: Union[str, None]
     filename: Path
     lang_2: str
     lang_3: str
@@ -310,14 +310,14 @@ class SearchResult:
     Data container for a search result from searching for subtitles.
     """
 
-    author: UserInfo
+    author: Union[UserInfo, None]
     media: MediaInfo
     subtitles: SubtitlesInfo
     upload_date: datetime
     num_bad_reports: int
     num_downloads: int
     num_comments: int
-    rating: float
+    rating: Union[float, None]
     score: float
 
     @classmethod
