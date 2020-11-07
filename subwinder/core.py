@@ -22,6 +22,13 @@ from subwinder import utils
 from subwinder._constants import Env
 from subwinder._internal_utils import CompatPath, type_check
 from subwinder._request import Endpoints
+from subwinder._types import (
+    BuiltMedia,
+    RankGuessMedia,
+    RankSearchSubtitles,
+    SearchQuery,
+    SubContainer,
+)
 from subwinder.exceptions import SubAuthError, SubDownloadError, SubLangError
 from subwinder.info import (
     Comment,
@@ -38,13 +45,6 @@ from subwinder.info import (
 from subwinder.lang import LangFormat, lang_2s, lang_3s, lang_longs
 from subwinder.media import Media
 from subwinder.ranking import rank_guess_media, rank_search_subtitles
-from subwinder.types import (
-    BuiltMedia,
-    RankGuessMedia,
-    RankSearchSubtitles,
-    SearchQuery,
-    SubContainer,
-)
 
 # Optional dependency: atomic_downloads
 try:

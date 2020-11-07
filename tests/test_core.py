@@ -11,9 +11,9 @@ import pytest  # type: ignore
 from subwinder import AuthSubwinder, Subwinder
 from subwinder._constants import Env
 from subwinder._request import Endpoints
+from subwinder._types import BuiltMedia
 from subwinder.exceptions import SubAuthError, SubDownloadError
 from subwinder.info import Comment, MovieInfo, TvSeriesInfo, UserInfo
-from subwinder.types import BuiltMedia
 from tests.constants import (
     DOWNLOAD_INFO,
     EPISODE_INFO1,

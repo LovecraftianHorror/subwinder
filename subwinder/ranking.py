@@ -1,7 +1,7 @@
 from typing import List, Optional
 
+from subwinder._types import BuiltMedia
 from subwinder.info import GuessMediaResult, SearchResult
-from subwinder.types import BuiltMedia
 
 
 def rank_guess_media(results: GuessMediaResult, query: int) -> Optional[BuiltMedia]:
