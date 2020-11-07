@@ -1,10 +1,11 @@
 import random
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from typing import Any
 
 
 class RandomTempFile:
-    def __init__(self, size, seed=None):
+    def __init__(self, size, seed=None) -> None:
         CHUNK_SIZE = 4096  # 4KiB
         random.seed(seed)
 
@@ -29,11 +30,11 @@ class RandomTempFile:
 
         self.file = Path(temp_file.name)
 
-    def __enter__(self):
+    def __enter__(self) -> Path:
         # Just return the path for the file
         return self.file
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
         # Just like in real life even when stuff isn't going great, just ignore all the
         # problems and keep moving on
         self.file.unlink()

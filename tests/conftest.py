@@ -5,6 +5,7 @@ documented for it, so enjoy this pytest black magic.
 
 import logging
 from datetime import datetime as dt
+from typing import Any, Generator
 
 import pytest  # type: ignore
 
@@ -13,7 +14,7 @@ from subwinder.lang import _converter
 NON_DEFAULT_MARKERS = ["io_heavy", "slow"]
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: Any) -> None:
     # Add a command line option to run all tests
     parser.addoption(
         "--run-all",
@@ -24,13 +25,13 @@ def pytest_addoption(parser):
 
 # XXX: Temporary workaround till mccabe has a new release
 #      https://github.com/PyCQA/mccabe/pull/83
-def pytest_configure(config):
+def pytest_configure(config: Any) -> None:
     # Make flake8 less verbose
     logging.getLogger("flake8").setLevel(logging.CRITICAL)
 
 
 @pytest.fixture(autouse=True)
-def _skip_non_default(request):
+def _skip_non_default(request: Any) -> None:
     node = request.node
 
     # IF we are skipping non default and we have a mark
@@ -43,7 +44,7 @@ def _skip_non_default(request):
                 )
 
 
-def skip_non_default(request):
+def skip_non_default(request: Any) -> bool:
     run_all = request.config.getoption("--run-all")
     mark = request.config.getoption("-m")
 
@@ -52,7 +53,7 @@ def skip_non_default(request):
 
 
 @pytest.fixture(autouse=True)
-def _fake_langs():
+def _fake_langs() -> Generator[None, None, None]:
     stored = _converter.dump()
     _converter.set(
         dt.now(),
@@ -66,7 +67,7 @@ def _fake_langs():
 
 # Negates `_fake_langs` which by default fakes the language listing
 @pytest.fixture
-def no_fake_langs():
+def no_fake_langs() -> Generator[None, None, None]:
     stored = _converter.dump()
 
     yield

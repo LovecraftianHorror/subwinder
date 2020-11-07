@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from typing import Dict, Iterable, Iterator, List, Optional, Tuple
 
 # See: https://github.com/LovecraftianHorror/subwinder/issues/52#issuecomment-637333960
 # if you want to know why `request` isn't imported with `from`
@@ -10,6 +11,7 @@ import subwinder._request
 from subwinder._request import Endpoints
 from subwinder.exceptions import SubLangError
 
+# TODO: why isn't this an enum?
 _LANG_2_KEY = "ISO639"
 _LANG_3_KEY = "SubLanguageID"
 _LANG_LONG_KEY = "LanguageName"
@@ -21,6 +23,10 @@ class LangFormat(Enum):
     LANG_LONG = 2
 
 
+LastUpdated = Optional[datetime]
+Langs = List[List[str]]
+
+
 class _LangConverter:
     """
     This class is used as a common converter to cache the language response from the API
@@ -29,13 +35,16 @@ class _LangConverter:
     any of the forms.
     """
 
-    def __init__(self):
+    _last_updated: LastUpdated
+    _langs: Langs
+
+    def __init__(self) -> None:
         self.default()
 
-    def _fetch(self):
+    def _fetch(self) -> List[Dict[str, str]]:
         return subwinder._request.request(Endpoints.GET_SUB_LANGUAGES, None)["data"]
 
-    def _maybe_update(self, force=False):
+    def _maybe_update(self, force: bool = False) -> None:
         # Language list should refresh every hour, return early if still fresh unless
         # update is `force`d
         if not force and self._last_updated is not None:
@@ -55,10 +64,10 @@ class _LangConverter:
         # Refresh updated time
         self._last_updated = datetime.now()
 
-    def default(self):
+    def default(self) -> None:
         self.set(None, [[] for _ in list(LangFormat)])
 
-    def dump(self):
+    def dump(self) -> Tuple[LastUpdated, Langs]:
         last_updated = self._last_updated
         langs = self._langs
 
@@ -66,11 +75,11 @@ class _LangConverter:
 
         return last_updated, langs
 
-    def set(self, last_updated, langs):
+    def set(self, last_updated: LastUpdated, langs: Langs) -> None:
         self._last_updated = last_updated
         self._langs = langs
 
-    def convert(self, lang, from_format, to_format):
+    def convert(self, lang: str, from_format: LangFormat, to_format: LangFormat) -> str:
         self._maybe_update()
 
         try:
@@ -83,7 +92,7 @@ class _LangConverter:
 
         return self._langs[to_format.value][lang_index]
 
-    def list(self, lang_format):
+    def list(self, lang_format: LangFormat) -> List[str]:
         self._maybe_update()
 
         return self._langs[lang_format.value]
@@ -94,7 +103,7 @@ _converter = _LangConverter()
 
 
 @dataclass
-class _Lang:
+class _Lang(Iterable):
     """
     Class that represents all actions for one of the three lang formats returned by the
     API. each `_Lang` shares a common `_converter` to try and reduce API calls as much
@@ -104,13 +113,13 @@ class _Lang:
 
     _format: LangFormat
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         return iter(_converter.list(self._format))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(_converter.list(self._format))
 
-    def convert(self, lang, to_format):
+    def convert(self, lang: str, to_format: LangFormat) -> str:
         """
         Convert the `lang` from the current format to `to_format`.
         """

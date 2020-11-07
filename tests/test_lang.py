@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Any
 from unittest.mock import call, patch
 
 from subwinder.lang import (
@@ -10,6 +11,8 @@ from subwinder.lang import (
     lang_longs,
 )
 
+# TODO: add a test for getting the lang list from the api response, mocking out request
+
 # Snippet of the GetSubLanguages response
 RESP = [
     {"ISO639": "de", "SubLanguageID": "ger", "LanguageName": "German"},
@@ -18,7 +21,7 @@ RESP = [
 ]
 
 
-def test_LangConverter():
+def test_LangConverter() -> None:
     converter = _LangConverter()
 
     with patch.object(converter, "_fetch", return_value=RESP) as mocked:
@@ -39,12 +42,12 @@ def test_LangConverter():
         mocked.assert_called_once_with()
 
         # Now wait long enough that we will refresh the langs
-        converter._last_updated -= timedelta(seconds=3600)
+        converter._last_updated -= timedelta(seconds=3600)  # type: ignore
         converter.list(LangFormat.LANG_2)
         mocked.assert_has_calls([call(), call()])
 
 
-def test_globals(no_fake_langs):
+def test_globals(no_fake_langs: Any) -> None:
     with patch.object(_converter, "_fetch", return_value=RESP) as mocked:
         # Check all the conversions
         assert "eng" == lang_2s.convert("en", LangFormat.LANG_3)

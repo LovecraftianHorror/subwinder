@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional, cast
 
+from subwinder._internal_utils import CompatPath
 from subwinder.utils import special_hash
 
 
@@ -12,10 +16,10 @@ class Media:
 
     hash: str
     size: int
-    _dirname: Path
-    _filename: Path
+    _dirname: Optional[Path]
+    _filename: Optional[Path]
 
-    def __init__(self, filepath):
+    def __init__(self, filepath: CompatPath) -> None:
         """
         Builds a `Media` object from a local file.
         """
@@ -28,7 +32,13 @@ class Media:
         self.set_filepath(filepath)
 
     @classmethod
-    def from_parts(cls, hash, size, dirname=None, filename=None):
+    def from_parts(
+        cls,
+        hash: str,
+        size: int,
+        dirname: Optional[CompatPath] = None,
+        filename: Optional[CompatPath] = None,
+    ) -> Media:
         """
         Builds a `Media` object from the individual parts.
         """
@@ -38,7 +48,13 @@ class Media:
 
         return media
 
-    def _from_parts(self, hash, size, dirname=None, filename=None):
+    def _from_parts(
+        self,
+        hash: str,
+        size: int,
+        dirname: Optional[CompatPath] = None,
+        filename: Optional[CompatPath] = None,
+    ) -> Media:
         self.hash = hash
         self.size = size
         self.set_dirname(dirname)
@@ -46,7 +62,7 @@ class Media:
 
         return self
 
-    def set_filepath(self, filepath):
+    def set_filepath(self, filepath: Optional[CompatPath]) -> None:
         if filepath is None:
             self.set_filename(None)
             self.set_dirname(None)
@@ -56,20 +72,20 @@ class Media:
             self.set_filename(filepath.name)
             self.set_dirname(filepath.parent)
 
-    def set_filename(self, filename):
+    def set_filename(self, filename: Optional[CompatPath]) -> None:
         self._filename = None if filename is None else Path(filename)
 
-    def set_dirname(self, dirname):
+    def set_dirname(self, dirname: Optional[CompatPath]) -> None:
         self._dirname = None if dirname is None else Path(dirname)
 
-    def get_filepath(self):
+    def get_filepath(self) -> Optional[Path]:
         if self.get_filename() is None or self.get_dirname() is None:
             return None
 
-        return self.get_dirname() / self.get_filename()
+        return cast(Path, self.get_dirname()) / cast(Path, self.get_filename())
 
-    def get_filename(self):
+    def get_filename(self) -> Optional[Path]:
         return self._filename
 
-    def get_dirname(self):
+    def get_dirname(self) -> Optional[Path]:
         return self._dirname

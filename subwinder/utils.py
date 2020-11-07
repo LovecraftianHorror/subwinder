@@ -2,8 +2,8 @@ import base64
 import gzip
 from pathlib import Path
 
-from subwinder.exceptions import SubHashError
 from subwinder._internal_utils import CompatPath
+from subwinder.exceptions import SubHashError
 
 
 def extract(contents: str) -> bytes:

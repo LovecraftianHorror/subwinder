@@ -1,25 +1,31 @@
-# Optional dependency: atomic_downloads
-try:
-    from atomicwrites import atomic_write
-
-    ATOMIC_DOWNLOADS_SUPPORT = True
-except ImportError:
-    ATOMIC_DOWNLOADS_SUPPORT = False
-
+from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import (
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 
 # See: https://github.com/LovecraftianHorror/subwinder/issues/52#issuecomment-637333960
 # if you want to know why `request` isn't imported with `from`
 import subwinder._request
 from subwinder import utils
 from subwinder._constants import Env
-from subwinder._internal_utils import type_check
+from subwinder._internal_utils import CompatPath, type_check
 from subwinder._request import Endpoints
 from subwinder.exceptions import SubAuthError, SubDownloadError, SubLangError
 from subwinder.info import (
     Comment,
+    DownloadInfo,
     EpisodeInfo,
     FullUserInfo,
     GuessMediaResult,
@@ -32,15 +38,34 @@ from subwinder.info import (
 from subwinder.lang import LangFormat, lang_2s, lang_3s, lang_longs
 from subwinder.media import Media
 from subwinder.ranking import rank_guess_media, rank_search_subtitles
+from subwinder.types import (
+    BuiltMedia,
+    RankGuessMedia,
+    RankSearchSubtitles,
+    SearchQuery,
+    SubContainer,
+)
+
+# Optional dependency: atomic_downloads
+try:
+    from atomicwrites import atomic_write
+
+    ATOMIC_DOWNLOADS_SUPPORT = True
+except ImportError:
+    ATOMIC_DOWNLOADS_SUPPORT = False
 
 
-def _build_search_query(query, lang):
+def _build_search_query(
+    query: Union[Media, MovieInfo, EpisodeInfo], lang: str
+) -> Dict[str, Union[int, str]]:
     """
     Helper function for `AuthSubwinder.search_subtitles(...)` that handles converting
     the `query` to the appropriate `dict` of information for the API.
     """
     # All queries take a language
-    internal_query = {"sublanguageid": lang_2s.convert(lang, LangFormat.LANG_3)}
+    internal_query: Dict[str, Union[int, str]] = {
+        "sublanguageid": lang_2s.convert(lang, LangFormat.LANG_3)
+    }
 
     # Handle all the different formats for seaching for subtitles
     if isinstance(query, Media):
@@ -61,7 +86,13 @@ def _build_search_query(query, lang):
     return internal_query
 
 
-def _batch(function, batch_size, iterables, *args, **kwargs):
+def _batch(
+    function: Callable[..., Optional[list]],
+    batch_size: int,
+    iterables: list,
+    *args: Any,
+    **kwargs: Any,
+) -> list:
     """
     Helper function that batches calls of `function` with at most `batch_size` amount of
     `iterables` each call. Both `args` and `kwargs` will be passed in directly.
@@ -84,31 +115,31 @@ class Subwinder:
     The class used for all unauthenticated functionality exposed by the library.
     """
 
-    _token = None
+    _token: Optional[str] = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}()"
 
-    def _request(self, endpoint, *params):
+    def _request(self, endpoint: Endpoints, *params: Any) -> dict:
         """
         Call the API `Endpoint` represented by `method` with any of the given `params`.
         """
         # Call the `request` function with our token
         return subwinder._request.request(endpoint, self._token, *params)
 
-    def daily_download_info(self):
+    def daily_download_info(self) -> DownloadInfo:
         """
         Returns `DownloadInfo` for the current client.
         """
         return self.server_info().daily_download_info
 
-    def get_languages(self):
+    def get_languages(self) -> List[Tuple[str, str, str]]:
         """
         Gets a list of the supported languages for the API in their various formats.
         """
         return list(zip(lang_2s, lang_3s, lang_longs))
 
-    def server_info(self):
+    def server_info(self) -> ServerInfo:
         """
         Returns `ServerInfo` for the opensubtitles.
         """
@@ -121,7 +152,12 @@ class AuthSubwinder(Subwinder):
     the library.
     """
 
-    def __init__(self, username=None, password=None, useragent=None):
+    def __init__(
+        self,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        useragent: Optional[str] = None,
+    ) -> None:
         """
         Signs in the user with the given `username`, `password` and program's
         `useragent`. These can also be set as environment variables instead if that's
@@ -156,18 +192,18 @@ class AuthSubwinder(Subwinder):
 
         self._token = self._login(username, password, useragent)
 
-    def __enter__(self):
+    def __enter__(self) -> AuthSubwinder:
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
         # Logout on exiting `with` if all is well
         if exc_type is None:
             self._logout()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}(_token: {self._token.__repr__()})"
 
-    def _login(self, username, password, useragent):
+    def _login(self, username: str, password: str, useragent: str) -> str:
         """
         Handles logging in the user with the provided information and storing the auth
         token. Automatically called by `__init__` so no need to call it directly.
@@ -175,7 +211,7 @@ class AuthSubwinder(Subwinder):
         resp = self._request(Endpoints.LOG_IN, username, password, "en", useragent)
         return resp["token"]
 
-    def _logout(self):
+    def _logout(self) -> None:
         """
         Attempts to log out the user from the current session. Automatically called on
         exiting `with` so no need to call it directly.
@@ -184,14 +220,18 @@ class AuthSubwinder(Subwinder):
         self._token = None
 
     def download_subtitles(
-        self, downloads, download_dir=None, name_format="{upload_filename}"
-    ):
+        self,
+        downloads: Collection[SubContainer],
+        download_dir: Optional[CompatPath] = None,
+        name_format: str = "{upload_filename}",
+    ) -> List[Path]:
         """
         Attempts to download the `SearchResult`s passed in as `downloads`. The download
         will attempt to place files in the same directory as the original file unless
         `download_dir` is provided. Files are automatically named according to the
         provided `name_format`.
         """
+        # TODO: handle checking iterables by checking for magic methods?
         type_check(downloads, (list, tuple))
 
         # Get all the subtitle file_ids from `downloads`
@@ -212,6 +252,7 @@ class AuthSubwinder(Subwinder):
                 subtitles = download.subtitles
                 media_dirname = download.media.get_dirname()
                 media_filename = download.media.get_filename()
+            subtitles = cast(SubtitlesInfo, subtitles)
 
             # Get a list of the `SubtitlesInfo` to pass along
             sub_containers.append(subtitles)
@@ -247,6 +288,7 @@ class AuthSubwinder(Subwinder):
                 dir_path = media_dirname
             else:
                 dir_path = Path(download_dir)
+            dir_path = cast(Path, dir_path)
 
             # Format the `filename` according to the `name_format` passed in
             upload_name = subtitles.filename.stem
@@ -278,7 +320,9 @@ class AuthSubwinder(Subwinder):
         # Return the list of paths where subtitle files were saved
         return download_paths
 
-    def _download_subtitles(self, sub_containers, filepaths):
+    def _download_subtitles(
+        self, sub_containers: Collection[SubtitlesInfo], filepaths: List[Path]
+    ) -> None:
         sub_file_ids = []
         # Get all the file ids
         sub_file_ids = [sub_container.file_id for sub_container in sub_containers]
@@ -300,7 +344,9 @@ class AuthSubwinder(Subwinder):
                 with fpath.open("wb") as f:
                     f.write(subtitles)
 
-    def get_comments(self, sub_containers):
+    def get_comments(
+        self, sub_containers: Iterable[SubContainer]
+    ) -> List[List[Comment]]:
         """
         Get all `Comment`s for the provided `search_results` if there are any.
         """
@@ -316,7 +362,7 @@ class AuthSubwinder(Subwinder):
         data = self._request(Endpoints.GET_COMMENTS, ids)["data"]
 
         # Group the results, if any, by the query order
-        groups = [[] for _ in sub_containers]
+        groups: List[List[dict]] = [[] for _ in sub_containers]
         if data:
             for id, comments in data.items():
                 # Returned `id` has a leading _ for some reason so strip it
@@ -330,13 +376,13 @@ class AuthSubwinder(Subwinder):
 
         return comments
 
-    def user_info(self):
+    def user_info(self) -> FullUserInfo:
         """
         Get information stored for the current user.
         """
         return FullUserInfo.from_data(self._request(Endpoints.GET_USER_INFO)["data"])
 
-    def ping(self):
+    def ping(self) -> None:
         """
         Pings the API to keep the session active. Sessions will automatically end after
         15 minutes of inactivity so this can be used to keep a session alive if there's
@@ -345,8 +391,13 @@ class AuthSubwinder(Subwinder):
         self._request(Endpoints.NO_OPERATION)
 
     def guess_media(
-        self, queries, ranking_func=rank_guess_media, *rank_args, **rank_kwargs,
-    ):
+        self,
+        queries: List[str],
+        # TODO: define helper type for ranking functions?
+        ranking_func: RankGuessMedia = rank_guess_media,
+        *rank_args: Any,
+        **rank_kwargs: Any,
+    ) -> List[Optional[BuiltMedia]]:
         """
         Same as `guess_media_unranked`, but selects the best result using `ranking_func`
         """
@@ -358,7 +409,7 @@ class AuthSubwinder(Subwinder):
 
         return selected
 
-    def guess_media_unranked(self, queries):
+    def guess_media_unranked(self, queries: List[str]) -> List[GuessMediaResult]:
         """
         Attempts to guess the media described by each of the `queries`. A custom ranking
         function can be provided to better match the result with `ranking_func` where
@@ -369,7 +420,7 @@ class AuthSubwinder(Subwinder):
         # Batch to 3 per api spec
         return _batch(self._guess_media_unranked, 3, [queries])
 
-    def _guess_media_unranked(self, queries):
+    def _guess_media_unranked(self, queries: List[str]) -> List[GuessMediaResult]:
         data = self._request(Endpoints.GUESS_MOVIE_FROM_STRING, queries)["data"]
 
         # Special case: so `""` is just silently excluded from the response so force it
@@ -383,7 +434,7 @@ class AuthSubwinder(Subwinder):
     #       calling this endpoint
     #       And the anser is yes. There are some attributes that only exist on an exact
     #       match
-    def report_media(self, sub_container):
+    def report_media(self, sub_container: SubContainer) -> None:
         """
         Reports the subtitles tied to the `search_result`. This can only be done if the
         match was done using a `Media` object so that the subtitles can be tied to a
@@ -411,8 +462,12 @@ class AuthSubwinder(Subwinder):
         self._request(Endpoints.REPORT_WRONG_MOVIE_HASH, sub_to_movie_id)
 
     def search_subtitles(
-        self, queries, ranking_func=rank_search_subtitles, *rank_args, **rank_kwargs,
-    ):
+        self,
+        queries: Collection[SearchQuery],
+        ranking_func: RankSearchSubtitles = rank_search_subtitles,
+        *rank_args: Any,
+        **rank_kwargs: Any,
+    ) -> List[Optional[SearchResult]]:
         """
         Same as `search_subtitles_unranked`, but the results are run through the
         `ranking_func` first to try and determine the best result.
@@ -427,7 +482,9 @@ class AuthSubwinder(Subwinder):
 
         return selected
 
-    def search_subtitles_unranked(self, queries):
+    def search_subtitles_unranked(
+        self, queries: Collection[SearchQuery]
+    ) -> List[List[SearchResult]]:
         """
         Searches for any subtitles that match the provided `queries`. Queries are
         allowed to be `Media`, `MovieInfo`, or `EpisodeInfo` objects. A custom ranking
@@ -435,11 +492,11 @@ class AuthSubwinder(Subwinder):
         gets passed the provided `*args` and `**kwargs`.
         """
         # Verify that all the queries are correct before doing any requests
-        type_check(queries, (list, tuple, zip))
+        type_check(queries, (list, tuple, zip))  # type: ignore
 
         # Expand out the `zip` to a `list`
-        if isinstance(queries, zip):
-            queries = list(zip)
+        if isinstance(queries, zip):  # type: ignore
+            queries = list(queries)
 
         VALID_CLASSES = (Media, MovieInfo, EpisodeInfo)
         for query_pair in queries:
@@ -454,23 +511,25 @@ class AuthSubwinder(Subwinder):
 
             if lang_2 not in lang_2s:
                 # Show both the 2-char and long name if invalid lang is given
-                lang_map = [f"{k} -> {v}" for k, v in zip(lang_2s, lang_longs)]
-                lang_map = "\n".join(lang_map)
+                langs = [f"{k} -> {v}" for k, v in zip(lang_2s, lang_longs)]
+                lang_map = "\n".join(langs)
 
                 raise SubLangError(
-                    f"'{lang_2}' not found in valid lang list:\n{lang_map}"
+                    f"'{lang_2}' not found in valid lang_2 list:\n{lang_map}"
                 )
 
         # This can return 500 items, but one query could return multiple so 20 is being
         # used in hope that there are plenty of results for each
         return _batch(self._search_subtitles_unranked, 20, [queries],)
 
-    def _search_subtitles_unranked(self, queries):
+    def _search_subtitles_unranked(
+        self, queries: List[SearchQuery]
+    ) -> List[List[SearchResult]]:
         internal_queries = [_build_search_query(q, l) for q, l in queries]
         data = self._request(Endpoints.SEARCH_SUBTITLES, internal_queries)["data"]
 
         # Go through the results and organize them in the order of `queries`
-        groups = [[] for _ in internal_queries]
+        groups: List[List[SearchResult]] = [[] for _ in internal_queries]
         for raw_result in data:
             # Results are returned in an arbitrary order so first figure out the query
             query_index = int(raw_result["QueryNumber"])
@@ -485,7 +544,7 @@ class AuthSubwinder(Subwinder):
 
         return groups
 
-    def suggest_media(self, query):
+    def suggest_media(self, query: str) -> List[BuiltMedia]:
         """
         Suggest results for guesses of what media is described by `query`.
         """
@@ -496,7 +555,9 @@ class AuthSubwinder(Subwinder):
         # `data` is an empty list if there were no results
         return [] if not data else [build_media_info(media) for media in data[query]]
 
-    def add_comment(self, sub_container, comment_str, bad=False):
+    def add_comment(
+        self, sub_container: SubContainer, comment_str: str, bad: bool = False
+    ) -> None:
         """
         Adds the comment `comment_str` for the `search_result`. If desired you can
         denote that the comment is due to the result being `bad`.
@@ -510,7 +571,7 @@ class AuthSubwinder(Subwinder):
 
         self._request(Endpoints.ADD_COMMENT, sub_id, comment_str, bad)
 
-    def vote(self, sub_container, score):
+    def vote(self, sub_container: SubContainer, score: int) -> None:
         """
         Votes for the `sub_id_obj` with a score of `score`.
         """
@@ -527,7 +588,7 @@ class AuthSubwinder(Subwinder):
 
         self._request(Endpoints.SUBTITLES_VOTE, sub_id, score)
 
-    def auto_update(self, program_name):
+    def auto_update(self, program_name: str) -> dict:
         """
         Returns information about `program_name` that is supposed to be useful for
         automatic updates. (Version info and download urls)
@@ -537,7 +598,7 @@ class AuthSubwinder(Subwinder):
         # Not sure if I should return this information in a better format
         return self._request(Endpoints.AUTO_UPDATE, program_name)
 
-    def preview_subtitles(self, sub_containers):
+    def preview_subtitles(self, sub_containers: List[SubContainer]) -> List[str]:
         """
         Gets a preview for the subtitles represented by `results`. Useful for being able
         to see part of the subtitles without eating into your daily download limit.
@@ -555,7 +616,7 @@ class AuthSubwinder(Subwinder):
         # Batch to 20 per api spec
         return _batch(self._preview_subtitles, 20, [file_ids])
 
-    def _preview_subtitles(self, ids):
+    def _preview_subtitles(self, ids: List[str]) -> List[str]:
         data = self._request(Endpoints.PREVIEW_SUBTITLES, ids)["data"]
 
         # Unpack our data

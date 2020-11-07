@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Any, Generator, List, Optional
 from unittest.mock import call, patch
 
 import pytest  # type: ignore
@@ -19,7 +20,7 @@ USERAGENT = "<useragent>"
 
 
 @pytest.fixture(scope="module", autouse=True)
-def set_credentials():
+def set_credentials() -> Generator[None, None, None]:
     # Set the fake credentials
     os.environ[Env.USERNAME.value] = USERNAME
     os.environ[Env.PASSWORD.value] = PASSWORD
@@ -35,11 +36,11 @@ def set_credentials():
 
 # TODO: calling it in the test and doing this without a fixture as gen still could work
 @pytest.fixture(scope="module")
-def gen_fake_media(request):
+def gen_fake_media(request) -> Generator[Optional[List[Path]], None, None]:
     # Generating media is expensive so only run if we're running io_heavy tests
     if skip_non_default(request):
         # Empty yield to keep pytest happy. No tests should use this in this case
-        yield  # <-- NO TESTS!
+        yield None  # <-- NO TESTS!
     else:
         entries_file = REPO_DIR / "dev" / "fake_media_entries.json"
 
@@ -56,7 +57,7 @@ def gen_fake_media(request):
 # TODO: don't use tmp_path, it doesn't actually remove the directory for some reason
 # XXX: don't have to remove lang stuff from here now
 @patch("subwinder._request.request")
-def test_interactive(mock_request, tmp_path):
+def test_interactive(mock_request: Any, tmp_path: Any) -> None:
     SAMPLE_INPUTS = [
         "mr robot",  # Media to search for
         "0",  # Select Mr. Robot TV Series

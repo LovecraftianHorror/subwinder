@@ -4,7 +4,7 @@ from subwinder import Media
 from tests.utils import RandomTempFile
 
 
-def test_Media():
+def test_Media() -> None:
     with RandomTempFile(128 * 1024, seed=1) as rand_file:
         media = Media(rand_file)
 

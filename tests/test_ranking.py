@@ -7,11 +7,11 @@ from tests.constants import (
 )
 
 
-def test_rank_guess_media():
-    assert rank_guess_media(GUESS_MEDIA_RESULT, None) == MOVIE_INFO1
+def test_rank_guess_media() -> None:
+    assert rank_guess_media(GUESS_MEDIA_RESULT, 0) == MOVIE_INFO1
 
 
-def test_rank_search_subtitles():
+def test_rank_search_subtitles() -> None:
     DUMMY_RESULTS = [
         SEARCH_RESULT1,
         SEARCH_RESULT2,

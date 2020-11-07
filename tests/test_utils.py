@@ -8,7 +8,7 @@ from subwinder.utils import extract, special_hash
 from tests.utils import RandomTempFile
 
 
-def test_extract():
+def test_extract() -> None:
     COMPRESSED = (
         "H4sIAIXHxV0C/yXLwQ0CMQxE0VbmxoVCoAyzHiBS4lnFXtB2TyRuT/r6N/Yu1JuTV9wvY9EKL8mhTm"
         "wa+2QmHRYOxiZfzuNRrVZv8dQcVk3xP08dSMFps5/4WhRKSPvwBzf2OXZqAAAA"
@@ -21,7 +21,7 @@ def test_extract():
     assert extract(COMPRESSED) == IDEAL
 
 
-def test_special_hash():
+def test_special_hash() -> None:
     CHUNK_SIZE = 64 * 1024  # 64KiB
     HASHED_SIZE = CHUNK_SIZE * 2
 

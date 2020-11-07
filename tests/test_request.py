@@ -8,7 +8,7 @@ from subwinder._request import Endpoints, _client, request
 from subwinder.exceptions import SubServerError
 
 
-def test__request():
+def test__request() -> None:
     RESP = {"status": "200 OK", "data": "The data!", "seconds": "0.15"}
     with patch.object(_client, "ServerInfo", return_value=RESP) as mocked:
         # Response should be passed through on success
@@ -18,7 +18,7 @@ def test__request():
 
 # Note: this test takes a bit of time because of the delayed API request retry
 @pytest.mark.slow
-def test_retry_on_fail():
+def test_retry_on_fail() -> None:
     CALLS = [
         call("<token>", "arg1", "arg2"),
         call("<token>", "arg1", "arg2"),
@@ -34,13 +34,13 @@ def test_retry_on_fail():
 
 
 @pytest.mark.slow
-def test_request_timeout():
+def test_request_timeout() -> None:
     # Requests take a bit to timeout so we're just gonna run all of them simultaneously
     with Pool(len(Endpoints)) as pool:
         pool.map(_test_request_timeout, list(Endpoints))
 
 
-def _test_request_timeout(endpoint):
+def _test_request_timeout(endpoint: Endpoints) -> None:
     RATE_LIMIT_SECONDS = 10
     BAD_RESP = {"status": "429 Too many requests", "seconds": "0.10"}
 

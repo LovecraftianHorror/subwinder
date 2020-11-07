@@ -382,7 +382,7 @@ class GuessMediaResult:
 
     best_guess: Optional[BuiltMedia]
     from_string: Optional[BuiltMedia]
-    from_imdb: List[MediaInfo]
+    from_imdb: List[BuiltMedia]
 
     @classmethod
     def from_data(cls, data: dict) -> GuessMediaResult:

@@ -27,7 +27,7 @@ from tests.constants import (
 )
 
 
-def test_build_media_info():
+def test_build_media_info() -> None:
     with (SAMPLES_DIR / "search_subtitles.json").open() as f:
         RESP = json.load(f)
     data = RESP["data"][0]
@@ -48,20 +48,20 @@ def test_build_media_info():
         mocked.assert_called_once_with(data)
 
 
-def test_UserInfo():
+def test_UserInfo() -> None:
     DATA = {"UserID": "1332962", "UserNickName": "elderman"}
 
     assert UserInfo.from_data(DATA) == USER_INFO1
 
 
-def test_FullUserInfo():
+def test_FullUserInfo() -> None:
     with (INFO_DIR / "full_user_info.json").open() as f:
         DATA = json.load(f)
 
     assert FullUserInfo.from_data(DATA) == FULL_USER_INFO1
 
 
-def test_Comment():
+def test_Comment() -> None:
     with (INFO_DIR / "comment.json").open() as f:
         DATA = json.load(f)
 
@@ -70,7 +70,7 @@ def test_Comment():
     )
 
 
-def test_MediaInfo():
+def test_MediaInfo() -> None:
     with (INFO_DIR / "media_info.json").open() as f:
         DATA = json.load(f)
 
@@ -80,16 +80,16 @@ def test_MediaInfo():
 
 
 @pytest.mark.skip(reason="This isn't any different than `MediaInfo`")
-def test_MovieInfo():
+def test_MovieInfo() -> None:
     pass
 
 
 @pytest.mark.skip(reason="This isn't any different than `MediaInfo`")
-def test_TvSeriesInfo():
+def test_TvSeriesInfo() -> None:
     pass
 
 
-def test_EpisodeInfo():
+def test_EpisodeInfo() -> None:
     with (INFO_DIR / "episode_info.json").open() as f:
         DATA = json.load(f)
 
@@ -103,14 +103,14 @@ def test_EpisodeInfo():
     assert EpisodeInfo.from_tv_series(tv_series, 4, 3) == EPISODE_INFO1
 
 
-def test_SubtitlesInfo():
+def test_SubtitlesInfo() -> None:
     with (INFO_DIR / "subtitles_info.json").open() as f:
         DATA = json.load(f)
 
     assert SubtitlesInfo.from_data(DATA) == SUBTITLES_INFO1
 
 
-def test_SearchResult():
+def test_SearchResult() -> None:
     with (SAMPLES_DIR / "search_subtitles.json").open() as f:
         SAMPLE_RESP = json.load(f)["data"][0]
 

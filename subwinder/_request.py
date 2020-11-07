@@ -1,6 +1,7 @@
 import time
 from datetime import datetime
 from enum import Enum
+from typing import Any, Optional
 from xml.parsers.expat import ExpatError
 from xmlrpc.client import ProtocolError, ServerProxy, Transport
 
@@ -88,8 +89,9 @@ _API_PROTOCOL_ERR_MAP = {
 _client = ServerProxy(API_BASE, allow_none=True, transport=Transport())
 
 
+# TODO: better define the values xmlrpc takes and gives to avoid any here
 # TODO: give a way to let lib user to set `TIMEOUT`?
-def request(endpoint, token, *params):
+def request(endpoint: Endpoints, token: Optional[str], *params: Any) -> dict:
     """
     Function to allow for robust and reusable calls to the XMLRPC API. `endpoint`
     is the `Endpoint` that you want to use from the opensubtitles API. `token` is the
