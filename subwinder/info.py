@@ -3,10 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Union, cast
+from typing import List, Optional, TypeVar, Union, cast
 
 from subwinder._constants import REPO_URL, TIME_FORMAT
-from subwinder._internal_utils import CompatPath
+from subwinder._internal_utils import PathLike
 from subwinder.exceptions import SubLibError
 from subwinder.lang import LangFormat, lang_3s
 
@@ -28,8 +28,8 @@ class MediaInfo:
         name: str,
         year: int,
         imdbid: str,
-        dirname: Optional[CompatPath],
-        filename: Optional[CompatPath],
+        dirname: Optional[PathLike],
+        filename: Optional[PathLike],
     ) -> None:
         self.name = name
         self.year = year
@@ -49,7 +49,7 @@ class MediaInfo:
 
         return cls(name, year, imdbid, dirname=None, filename=None)
 
-    def set_filepath(self, filepath: Optional[CompatPath]) -> None:
+    def set_filepath(self, filepath: Optional[PathLike]) -> None:
         if filepath is None:
             self.set_dirname(None)
             self.set_filename(None)
@@ -59,10 +59,10 @@ class MediaInfo:
             self.set_dirname(filepath.parent)
             self.set_filename(filepath.name)
 
-    def set_filename(self, filename: Optional[CompatPath]) -> None:
+    def set_filename(self, filename: Optional[PathLike]) -> None:
         self._filename: Optional[Path] = None if filename is None else Path(filename)
 
-    def set_dirname(self, dirname: Optional[CompatPath]) -> None:
+    def set_dirname(self, dirname: Optional[PathLike]) -> None:
         self._dirname = None if dirname is None else Path(dirname)
 
     def get_filepath(self) -> Optional[Path]:
@@ -114,8 +114,8 @@ class EpisodeInfo(TvSeriesInfo):
         name: str,
         year: int,
         imdbid: str,
-        dirname: Optional[CompatPath],
-        filename: Optional[CompatPath],
+        dirname: Optional[PathLike],
+        filename: Optional[PathLike],
         season: int,
         episode: int,
     ) -> None:
@@ -134,7 +134,7 @@ class EpisodeInfo(TvSeriesInfo):
 
     @classmethod
     def from_tv_series(
-        cls, tv_series: TvSeriesInfo, season: int, episode: int
+        cls, tv_series: TvSeriesBase, season: int, episode: int
     ) -> EpisodeInfo:
         return cls(
             name=tv_series.name,
@@ -147,7 +147,13 @@ class EpisodeInfo(TvSeriesInfo):
         )
 
 
-BuiltMedia = Union[MovieInfo, EpisodeInfo, TvSeriesInfo]
+EpisodeBase = TypeVar("EpisodeBase", bound=EpisodeInfo)
+MovieBase = TypeVar("MovieBase", bound=MovieInfo)
+TvSeriesBase = TypeVar("TvSeriesBase", bound=TvSeriesInfo)
+# XXX: Neither of these types below work out. `mypy` complains about the former and the
+# latter becomes `Any` for some reason. Work will be stalled till this is figured out.
+BuiltMedia = TypeVar("BuiltMedia", bound=Union[EpisodeInfo, MovieInfo, TvSeriesInfo])
+# BuiltMedia = Union[MovieBase, EpisodeBase, TvSeriesBase]
 
 
 # Build the right info object from the "MovieKind"

@@ -88,7 +88,7 @@ def test_server_info() -> None:
 # XXX: ENV_VARS stuff is a bit messy here. try to clean up logic if possible
 #      should probably be a fixture that wipes env vars in the beginning of all testing
 # TODO: mypy doesn't like expanding out the params
-def test_authsubwinder__init__():
+def test_authsubwinder__init__() -> None:
     # Clear out env vars if set
     for variant in Env:
         if variant.value in os.environ:
@@ -107,7 +107,7 @@ def test_authsubwinder__init__():
 
     for params in bad_params:
         with pytest.raises(SubAuthError):
-            AuthSubwinder(*params)
+            AuthSubwinder(*params)  # type: ignore
 
 
 # TODO: Test creating an AuthSubwinder instead

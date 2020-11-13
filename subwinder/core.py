@@ -20,7 +20,7 @@ from typing import (
 import subwinder._request
 from subwinder import utils
 from subwinder._constants import Env
-from subwinder._internal_utils import CompatPath, type_check
+from subwinder._internal_utils import PathLike, type_check
 from subwinder._request import Endpoints
 from subwinder._types import (
     BuiltMedia,
@@ -222,7 +222,7 @@ class AuthSubwinder(Subwinder):
     def download_subtitles(
         self,
         downloads: Collection[SubContainer],
-        download_dir: Optional[CompatPath] = None,
+        download_dir: Optional[PathLike] = None,
         name_format: str = "{upload_filename}",
     ) -> List[Path]:
         """
@@ -494,12 +494,9 @@ class AuthSubwinder(Subwinder):
         # Verify that all the queries are correct before doing any requests
         type_check(queries, (list, tuple, zip))  # type: ignore
 
-        # Expand out the `zip` to a `list`
-        if isinstance(queries, zip):  # type: ignore
-            queries = list(queries)
-
         VALID_CLASSES = (Media, MovieInfo, EpisodeInfo)
-        for query_pair in queries:
+        # Expand out the `zip` to a `list`
+        for query_pair in list(queries):
             if not isinstance(query_pair, (list, tuple)) or len(query_pair) != 2:
                 raise ValueError(
                     "The `search_subtitles` variants expect a list of pairs of the form"

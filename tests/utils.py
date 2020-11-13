@@ -5,7 +5,7 @@ from typing import Any
 
 
 class RandomTempFile:
-    def __init__(self, size, seed=None) -> None:
+    def __init__(self, size: int, seed: int = None) -> None:
         CHUNK_SIZE = 4096  # 4KiB
         random.seed(seed)
 

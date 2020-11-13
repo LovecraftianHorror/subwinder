@@ -1,11 +1,14 @@
 from typing import Callable, Optional, Tuple, Union
 
-from subwinder.info import (
+from subwinder.info import (  # noqa: F401 Handle rexports better before public
     BuiltMedia,
+    EpisodeBase,
     EpisodeInfo,
+    MovieBase,
     MovieInfo,
     SearchResult,
     SubtitlesInfo,
+    TvSeriesBase,
 )
 from subwinder.media import Media
 
@@ -13,5 +16,6 @@ from subwinder.media import Media
 #       was giving me problems
 RankGuessMedia = Callable[..., Optional[BuiltMedia]]
 RankSearchSubtitles = Callable[..., Optional[SearchResult]]
-SearchQuery = Tuple[Union[Media, MovieInfo, EpisodeInfo], str]
+SearchQueryable = Union[Media, MovieBase, EpisodeBase]
+SearchQuery = Tuple[SearchQueryable, str]
 SubContainer = Union[SearchResult, SubtitlesInfo]

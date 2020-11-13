@@ -1,17 +1,19 @@
 #!/usr/bin/env python
 import sys
 from datetime import datetime as dt
+from typing import Union, cast
 
-from subwinder import AuthSubwinder, info
+# TODO: waiting to stabilize still
+from subwinder import AuthSubwinder, _types, info
 
 
-def main():
+def main() -> None:
     # Language of our desired subtitles
     LANG = "en"
     interative(LANG)
 
 
-def interative(lang):
+def interative(lang: str) -> None:
     # Assumes all the credentials are set using environment variables
     with AuthSubwinder() as asw:
         # Give a nice friendly prompt
@@ -28,8 +30,8 @@ def interative(lang):
 
         # Build our extended objects and display the media
         ext_media = [build_extended_mediainfo(m) for m in media]
-        for i, media in enumerate(ext_media):
-            print(f"{i}) {media}")
+        for i, m in enumerate(ext_media):
+            print(f"{i}) {m}")
         print()
 
         # Find which one they want to view
@@ -38,7 +40,8 @@ def interative(lang):
             sys.exit(f"Entry {resp} out of bounds (0 -> {len(ext_media) - 1})")
 
         # Search for the subtitles
-        desired = ext_media[resp]
+        desired: _types.BuiltMedia = ext_media[resp]
+
         # This is the special case of a `TvSeriesInfo` again. So if we have a
         # `TvSeriesInfo` we need to get the specific episode to search for. If you have
         # information about the number of series and episodes available then you could
@@ -48,8 +51,11 @@ def interative(lang):
             season = int(input("What season do you want? "))
             episode = int(input("What episode do you want? "))
             print()
-            desired = info.EpisodeInfo.from_tv_series(desired, season, episode)
-        results = asw.search_subtitles_unranked([(desired, lang)])[0]
+            desired = info.EpisodeInfo.from_tv_series(
+                cast(ExtTvSeriesInfo, desired), season, episode
+            )
+        to_download: _types.SearchQueryable = desired
+        results = asw.search_subtitles_unranked([(to_download, lang)])[0]
         ext_results = [ExtSearchResult(result) for result in results]
 
         print("Results:")
@@ -57,59 +63,49 @@ def interative(lang):
             print(f"{i}) {ext_result}")
         print()
 
-        resp = int(
+        preview_index = int(
             input(f"Which one do you want to preview? (0 -> {len(ext_results) - 1}) ")
         )
-        if resp < 0 or resp >= len(ext_results):
+        if preview_index < 0 or preview_index >= len(ext_results):
             sys.exit(f"Entry {resp} out of bounds (0 -> {len(ext_results) - 1})")
-        result = ext_results[resp]
+        result = ext_results[preview_index]
         preview = asw.preview_subtitles([result])[0]
         # Limit preview size
         print(f"Preview:\n{preview[:200]}\n")
 
-        resp = input("Do you want to download these subtitles? (Y/n) ").strip().lower()
-        if resp == "n":
+        y_or_n = (
+            input("Do you want to download these subtitles? (Y/n) ").strip().lower()
+        )
+        if y_or_n == "n":
             sys.exit()
-        elif resp not in ["y", ""]:
+        elif y_or_n not in ["y", ""]:
             sys.exit(f"Unrecognized option '{resp}'")
 
-        resp = input("Where do you want them downloaded? ")
+        location = input("Where do you want them downloaded? ")
 
-        download_path = asw.download_subtitles([result], download_dir=resp)[0]
+        download_path = asw.download_subtitles([result], download_dir=location)[0]
         print(f"Downloaded to '{download_path}', have a nice day!")
 
 
 # And now we can extend all the `MediaInfo` classes we care about
 class ExtMovieInfo(info.MovieInfo):
-    def __init__(self, movie):
-        super().__init__(
-            movie.name,
-            movie.year,
-            movie.imdbid,
-            movie.get_dirname(),
-            movie.get_filename(),
-        )
+    def __init__(self, movie: info.MovieInfo) -> None:
+        super().__init__(**movie.__dict__)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"(Movie)\t{self.name}\t({self.year})\t(imdb: {self.imdbid})"
 
 
 class ExtTvSeriesInfo(info.TvSeriesInfo):
-    def __init__(self, tv_series):
-        super().__init__(
-            tv_series.name,
-            tv_series.year,
-            tv_series.imdbid,
-            tv_series.get_dirname(),
-            tv_series.get_filename(),
-        )
+    def __init__(self, tv_series: info.TvSeriesInfo) -> None:
+        super().__init__(**tv_series.__dict__)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"(TV Series)\t{self.name}\t({self.year})\t(imdb: {self.imdbid})"
 
 
 # Helper function to make it easier to build the appropriate extended `MediaInfo`
-def build_extended_mediainfo(obj):
+def build_extended_mediainfo(obj) -> Union[ExtMovieInfo, ExtTvSeriesInfo]:
     CLASS_MAP = {
         info.MovieInfo: ExtMovieInfo,
         info.TvSeriesInfo: ExtTvSeriesInfo,
@@ -121,11 +117,11 @@ def build_extended_mediainfo(obj):
 
 
 class ExtSearchResult(info.SearchResult):
-    def __init__(self, search_result):
+    def __init__(self, search_result: info.SearchResult) -> None:
         # All of the members are named the same the params so we can just pass in
         super().__init__(**search_result.__dict__)
 
-    def __str__(self):
+    def __str__(self) -> str:
         TIME_FMT = "%Y-%m-%d %H:%M:%S"
         upload = dt.strftime(self.upload_date, TIME_FMT)
         sub = self.subtitles

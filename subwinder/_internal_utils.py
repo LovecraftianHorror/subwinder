@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any, Tuple, Union
 
-CompatPath = Union[str, Path]
+PathLike = Union[str, Path]
 
 
 def type_check(

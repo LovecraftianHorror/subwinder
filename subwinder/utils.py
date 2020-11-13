@@ -2,7 +2,7 @@ import base64
 import gzip
 from pathlib import Path
 
-from subwinder._internal_utils import CompatPath
+from subwinder._internal_utils import PathLike
 from subwinder.exceptions import SubHashError
 
 
@@ -16,7 +16,7 @@ def extract(contents: str) -> bytes:
 
 # As per API spec with some tweaks to make it a bit nicer
 # https://trac.opensubtitles.org/projects/opensubtitles/wiki/HashSourceCodes
-def special_hash(filepath: CompatPath) -> str:
+def special_hash(filepath: PathLike) -> str:
     """
     The "special hash" used by opensubtitles representing a specific media file.
     """

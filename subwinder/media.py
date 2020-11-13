@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, cast
 
-from subwinder._internal_utils import CompatPath
+from subwinder._internal_utils import PathLike
 from subwinder.utils import special_hash
 
 
@@ -19,7 +19,7 @@ class Media:
     _dirname: Optional[Path]
     _filename: Optional[Path]
 
-    def __init__(self, filepath: CompatPath) -> None:
+    def __init__(self, filepath: PathLike) -> None:
         """
         Builds a `Media` object from a local file.
         """
@@ -36,8 +36,8 @@ class Media:
         cls,
         hash: str,
         size: int,
-        dirname: Optional[CompatPath] = None,
-        filename: Optional[CompatPath] = None,
+        dirname: Optional[PathLike] = None,
+        filename: Optional[PathLike] = None,
     ) -> Media:
         """
         Builds a `Media` object from the individual parts.
@@ -52,8 +52,8 @@ class Media:
         self,
         hash: str,
         size: int,
-        dirname: Optional[CompatPath] = None,
-        filename: Optional[CompatPath] = None,
+        dirname: Optional[PathLike] = None,
+        filename: Optional[PathLike] = None,
     ) -> Media:
         self.hash = hash
         self.size = size
@@ -62,7 +62,7 @@ class Media:
 
         return self
 
-    def set_filepath(self, filepath: Optional[CompatPath]) -> None:
+    def set_filepath(self, filepath: Optional[PathLike]) -> None:
         if filepath is None:
             self.set_filename(None)
             self.set_dirname(None)
@@ -72,10 +72,10 @@ class Media:
             self.set_filename(filepath.name)
             self.set_dirname(filepath.parent)
 
-    def set_filename(self, filename: Optional[CompatPath]) -> None:
+    def set_filename(self, filename: Optional[PathLike]) -> None:
         self._filename = None if filename is None else Path(filename)
 
-    def set_dirname(self, dirname: Optional[CompatPath]) -> None:
+    def set_dirname(self, dirname: Optional[PathLike]) -> None:
         self._dirname = None if dirname is None else Path(dirname)
 
     def get_filepath(self) -> Optional[Path]:

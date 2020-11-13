@@ -43,7 +43,9 @@ def _parse_args() -> argparse.Namespace:
 
 # TODO: take Path or str?
 # TODO: test that the hashes are right in unit testing
-def fake_media(entry_file: Path, output_dir: Path, entry_indicies: List[int] = []):
+def fake_media(
+    entry_file: Path, output_dir: Path, entry_indicies: List[int] = []
+) -> List[Path]:
     HASH_SIZE = 8
     MAX_HASH = 2 ** (HASH_SIZE * 8) - 1
     MIN_FILE_SIZE = 128 * 1024
